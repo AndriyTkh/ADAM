@@ -89,36 +89,36 @@ Tasks marked `[FE]`/`[BE]` run in that worktree; `[INFRA]`/`[DOC]` in root.
 
 | ID | Status | Task | Deps | Notes |
 |---|---|---|---|---|
-| BE-1 | TODO | `GET /v1/pollutants` catalog (drives FE tabs/scales) | SETUP-1 | MVP 4, `available` flag |
-| BE-2 | TODO | Grid generator: mock hotspots → IDW/RBF (scipy) → 256² Uint8 grid per bucket | SETUP-1 | **Gap: algo/params unspecced — define here** |
-| BE-3 | TODO | `GET /v1/grid/{pollutant}/{t}.bin` single-bucket + header | BE-2, SETUP-3 | 204 on empty bucket |
-| BE-4 | TODO | `GET /v1/grid/{pollutant}/range` packed delta+brotli blob, frameskip, KEYFRAME_INTERVAL=60 | BE-3 | Immutable cache headers |
-| BE-5 | TODO | Step→stride + clamp-table enforcement (422 below min-step) | BE-4 | Table locked in STRUCTURE |
-| BE-6 | TODO | `GET /v1/timerange` (bounds, steps, buckets) | BE-2 | |
-| BE-7 | TODO | OpenAQ wrapper: `/v1/sensors`, `/v1/sensors/readings` (hold hourly across buckets, datetimeLast) | SETUP-1 | Hide key, cache, CORS |
-| BE-8 | TODO | Mock vehicles: `/v1/vehicles`, `/v1/vehicles/{id}/path` w/ per-vertex readings | BE-2 | Count TBD (Open Item 1) |
-| BE-9 | TODO | `GET /v1/point` interpolated all-pollutant reading + nearestSensor | BE-2 | Primary spatial interaction |
-| BE-10 | TODO | `GET /v1/alerts` (WS demoted/optional) | BE-2 | |
-| BE-11 | TODO | Bounds-PNG fallback dual-emit (built, frontend unwired) | BE-2 | Insurance |
+| BE-1 | DONE | `GET /v1/pollutants` catalog (drives FE tabs/scales) | SETUP-1 | MVP 4, `available` flag |
+| BE-2 | DONE | Grid generator: mock hotspots → IDW/RBF (scipy) → 256² Uint8 grid per bucket | SETUP-1 | 5 hotspots, IDW p=2, traffic+drift modulation — algo locked in `grid_gen.py` |
+| BE-3 | DONE | `GET /v1/grid/{pollutant}/{t}.bin` single-bucket + header | BE-2, SETUP-3 | immutable cache on historical |
+| BE-4 | DONE | `GET /v1/grid/{pollutant}/range` packed delta+brotli blob, frameskip, KEYFRAME_INTERVAL=60 | BE-3 | Immutable cache headers |
+| BE-5 | DONE | Step→stride + clamp-table enforcement (422 below min-step) | BE-4 | Table locked in STRUCTURE |
+| BE-6 | DONE | `GET /v1/timerange` (bounds, steps, buckets) | BE-2 | 3-day demo span (Open Item 3 resolved) |
+| BE-7 | DONE | OpenAQ wrapper: `/v1/sensors`, `/v1/sensors/readings` (hold hourly across buckets, datetimeLast) | SETUP-1 | Mock when key empty; real fetch skeleton wired |
+| BE-8 | DONE | Mock vehicles: `/v1/vehicles`, `/v1/vehicles/{id}/path` w/ per-vertex readings | BE-2 | 8 vehicles (Open Item 1 resolved) |
+| BE-9 | DONE | `GET /v1/point` interpolated all-pollutant reading + nearestSensor | BE-2 | Primary spatial interaction |
+| BE-10 | DONE | `GET /v1/alerts` (WS demoted/optional) | BE-2 | threshold-based mock |
+| BE-11 | DONE | Bounds-PNG fallback dual-emit (built, frontend unwired) | BE-2 | Insurance; needs Pillow (optional dep) |
 | BE-12 | TODO | Pre-generate demo bucket span to flat files + static serve | BE-2..BE-9 | Span TBD (Open Item 3) |
 
 ### Phase 2 — Frontend core
 
 | ID | Status | Task | Deps | Notes |
 |---|---|---|---|---|
-| FE-1 | TODO | API client + TanStack queries + types (mirror pydantic) | SETUP-2, SETUP-3 | query keys include {pollutant,t,mode} |
-| FE-2 | TODO | MapView + dark base + Kyiv bounds | SETUP-1 | Base style TBD (Open Item 2) |
-| FE-3 | TODO | HeatmapLayer: WebGL2 custom layer, 2 persistent textures, per-pollutant ramp shader | FE-2, BE-3 | Fail fast if no WebGL2 |
-| FE-4 | TODO | Decode worker (delta-decode, frameskip-aware, transferable) | SETUP-3 | Brotli = browser, not worker |
-| FE-5 | TODO | Playback engine: ring buffer + buffer-ahead + texSubImage2D loop + mix() tween | FE-3, FE-4, BE-4 | The perf core |
+| FE-1 | DONE | API client + TanStack queries + types (mirror pydantic) | SETUP-2, SETUP-3 | client.ts, queries.ts, types.ts, range.ts, live.ts |
+| FE-2 | DONE | MapView + dark base + Kyiv bounds | SETUP-1 | CartoDB Dark Matter raster; MapContext for child layers |
+| FE-3 | DONE | HeatmapLayer: WebGL2 custom layer, 2 persistent textures, per-pollutant ramp shader | FE-2, BE-3 | Fetches live from BE-3; context-loss recovery wired |
+| FE-4 | DONE | Decode worker (delta-decode, frameskip-aware, transferable) | SETUP-3 | decodeWorker.ts; brotli stays browser-side |
+| FE-5 | DONE | Playback engine: ring buffer + buffer-ahead + texSubImage2D loop + mix() tween | FE-3, FE-4, BE-4 | ringBuffer.ts, buffer.ts, engine.ts |
 | FE-6 | TODO | NavWindow: single-bucket nav + range playback, step selector w/ live clamp greying | FE-5, BE-5, BE-6 | |
-| FE-7 | TODO | PollutantTabs (dynamic from /pollutants) + Legend (per-pollutant scale) + scales.ts | FE-1, BE-1 | |
+| FE-7 | DONE | PollutantTabs (dynamic from /pollutants) + Legend (per-pollutant scale) + scales.ts | FE-1, BE-1 | PollutantTabs.tsx, Legend.tsx, scales.ts (EAQI+conc ramps) |
 | FE-8 | TODO | SensorsLayer (circle, tier-styled, recolor per bucket) | FE-2, BE-7 | |
 | FE-9 | TODO | VehiclesLayer (lerp during playback) + TrailLayer (line-gradient, pickable vertices) | FE-2, BE-8 | source.setData outside React |
 | FE-10 | TODO | Point-pick pin → PointPanel (all pollutants, confidence, AbortController latest-wins) | FE-2, BE-9 | |
-| FE-11 | TODO | TopBar (logo, AQI badge, vehicle count, UTC+3 clock, staleness) | FE-1 | DST-aware labels |
-| FE-12 | TODO | URL deep-link state {pollutant,t,mode,range} | FE-6, FE-7 | |
-| FE-13 | TODO | Loading/skeleton states + WebGL2 fail + context-loss recovery | FE-3, FE-5 | |
+| FE-11 | DONE | TopBar (logo, AQI badge, vehicle count, UTC+3 clock, staleness) | FE-1 | DST-aware via Intl; stale + alert badge |
+| FE-12 | DONE | URL deep-link state {pollutant,t,mode,range} | FE-6, FE-7 | urlState.ts; uiStore pushes on every change |
+| FE-13 | WIP | Loading/skeleton states + WebGL2 fail + context-loss recovery | FE-3, FE-5 | WebGL2 fail + context-loss in HeatmapLayer; skeletons pending |
 
 ### Phase 3 — Hardening
 
@@ -172,9 +172,9 @@ Caveats:
 
 ## Open items (carried from STRUCTURE)
 
-1. Vehicle count for demo — pick a number (BE-8).
-2. Base map style — CartoDB dark raster vs vector (FE-2).
-3. Demo data span to pre-generate (BE-12).
+1. ✅ Vehicle count — **8 vehicles** (2 trucks, 3 vans, 3 bikes). Locked in BE-8.
+2. ✅ Base map style — CartoDB Dark Matter raster. LOCKED.
+3. ✅ Demo data span — **3 days** (live rolling window). Locked in BE-6/BE-12.
 4. ✅ Step→min-step clamp — LOCKED.
 5. ✅ Keyframe interval = 60 — LOCKED.
 6. Brotli wire size on real data (QA-1) — last real unknown.
