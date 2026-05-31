@@ -81,9 +81,9 @@ Tasks marked `[FE]`/`[BE]` run in that worktree; `[INFRA]`/`[DOC]` in root.
 
 | ID | Status | Task | Deps | Notes |
 |---|---|---|---|---|
-| SETUP-1 | TODO | Create 2 git worktrees (frontend/backend), scaffold both projects (Vite+TS, FastAPI), root README pointing to PLAN | — | Decide subtree-vs-sibling worktree layout |
-| SETUP-2 | TODO | Local dev wiring: Vite dev-proxy → FastAPI, CORS origins, ports, `.env` for API base URL | SETUP-1 | **Gap: not yet in STRUCTURE — spec here** |
-| SETUP-3 | TODO | Shared binary header codec (encode py / decode ts) + round-trip test as parity contract | SETUP-1 | Header spec in STRUCTURE |
+| SETUP-1 | DONE | Create 2 git worktrees (frontend/backend), scaffold both projects (Vite+TS, FastAPI), root README pointing to PLAN | — | Sibling worktrees, branch-per-side (see Worktree layout below) |
+| SETUP-2 | DONE | Local dev wiring: Vite dev-proxy → FastAPI, CORS origins, ports, `.env` for API base URL | SETUP-1 | Spec'd below (Dev wiring) |
+| SETUP-3 | DONE | Shared binary header codec (encode py / decode ts) + round-trip test as parity contract | SETUP-1 | `binary.py`/`binaryHeader.ts`, golden fixtures, both suites green |
 
 ### Phase 1 — Backend core
 
@@ -179,10 +179,49 @@ Caveats:
 5. ✅ Keyframe interval = 60 — LOCKED.
 6. Brotli wire size on real data (QA-1) — last real unknown.
 
+## Worktree layout (SETUP-1, locked)
+
+Sibling worktrees, one branch each (git refuses same branch in two worktrees):
+
+```
+ADAM/            main      docs/shared
+ADAM-backend/    backend   Python 3.13 + FastAPI (.venv local)
+ADAM-frontend/   frontend  React + TS + Vite
+```
+
+`git worktree add -b <branch> ../ADAM-<side> main`. Stay in your worktree;
+contract changes go through STRUCTURE first.
+
+### Backend folder layout (SETUP-1, counterpart to FE tree)
+```
+ADAM-backend/
+  app/
+    main.py            # FastAPI app, CORS, /v1 router mount, /health
+    config.py          # pydantic-settings, env prefix ADAM_, Kyiv bbox/grid_dim
+    api/v1/__init__.py # APIRouter; sub-routers added per BE task
+    core/
+      binary.py        # header codec (SETUP-3) — mirrors binaryHeader.ts
+      grid_gen.py      # BE-2 (TODO)
+      buckets.py       # 10-min bucket helpers (TODO)
+    models/schemas.py  # pydantic mirrors of types.ts (TODO)
+    data/              # pre-generated demo buckets (gitignored, BE-12)
+  tests/
+    fixtures/          # golden .bin shared w/ FE __fixtures__
+    test_binary.py
+  requirements.txt  .env.example  .venv/
+```
+
+### Dev wiring (SETUP-2, locked)
+- Ports: FastAPI `:8000`, Vite `:5173`.
+- Vite proxies `/v1` + `/health` → `VITE_API_PROXY_TARGET` (default
+  `http://localhost:8000`) so dev browser is same-origin (no CORS in dev).
+- Prod: FE hits `VITE_API_BASE_URL` (e.g. `https://api.adam.in.ua`) directly;
+  backend `CORSMiddleware` allows `ADAM_CORS_ORIGINS`.
+- Client rule: empty `VITE_API_BASE_URL` → request `/v1/...` (proxied);
+  set → absolute base. Env templates: `.env.example` both sides.
+
 ## Spec gaps to resolve in-task (not yet in STRUCTURE)
 
-- Backend folder layout (counterpart to FE tree) — define during SETUP-1.
-- Local dev wiring (proxy/ports/CORS) — SETUP-2.
 - Grid-gen mock hotspot algorithm/params — BE-2.
 - Test strategy — QA-2.
 - Build/deploy steps — QA-3.
