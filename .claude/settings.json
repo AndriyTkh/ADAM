@@ -1,0 +1,33 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \"c:\\Users\\andri\\Documents\\WebDev\\ADAM\\.claude\\hooks\\frontend-log.ps1\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \"c:\\Users\\andri\\Documents\\WebDev\\ADAM\\.claude\\hooks\\check.ps1\"",
+            "asyncRewake": true
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "c:\\Users\\andri\\Documents\\WebDev\\ADAM-backend",
+      "c:\\Users\\andri\\Documents\\WebDev\\ADAM-frontend"
+    ]
+  }
+}

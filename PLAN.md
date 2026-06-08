@@ -81,7 +81,7 @@ Tasks marked `[FE]`/`[BE]` run in that worktree; `[INFRA]`/`[DOC]` in root.
 
 | ID | Status | Task | Deps | Notes |
 |---|---|---|---|---|
-| SETUP-1 | DONE | Create 2 git worktrees (frontend/backend), scaffold both projects (Vite+TS, FastAPI), root README pointing to PLAN | — | Sibling worktrees, branch-per-side (see Worktree layout below) |
+| SETUP-1 | DONE | Create 2 git worktrees (frontend/backend), scaffold both projects (Vite+TS, FastAPI), root README pointing to PLAN | — | Worktrees at `../ADAM-backend` (branch: backend) + `../ADAM-frontend` (branch: frontend) |
 | SETUP-2 | DONE | Local dev wiring: Vite dev-proxy → FastAPI, CORS origins, ports, `.env` for API base URL | SETUP-1 | Spec'd below (Dev wiring) |
 | SETUP-3 | DONE | Shared binary header codec (encode py / decode ts) + round-trip test as parity contract | SETUP-1 | `binary.py`/`binaryHeader.ts`, golden fixtures, both suites green |
 
@@ -90,13 +90,13 @@ Tasks marked `[FE]`/`[BE]` run in that worktree; `[INFRA]`/`[DOC]` in root.
 | ID | Status | Task | Deps | Notes |
 |---|---|---|---|---|
 | BE-1 | DONE | `GET /v1/pollutants` catalog (drives FE tabs/scales) | SETUP-1 | MVP 4, `available` flag |
-| BE-2 | DONE | Grid generator: mock hotspots → IDW/RBF (scipy) → 256² Uint8 grid per bucket | SETUP-1 | 5 hotspots, IDW p=2, traffic+drift modulation — algo locked in `grid_gen.py` |
+| BE-2 | DONE | Grid generator: **IDW reconstruction from vehicle probes** (scipy cKDTree) → 256² Uint8 | SETUP-1 | Grid-from-probes pipeline (p=1.5, weak background, Gaussian blur). Old hotspots now the hidden `true_field` in `field.py` |
 | BE-3 | DONE | `GET /v1/grid/{pollutant}/{t}.bin` single-bucket + header | BE-2, SETUP-3 | immutable cache on historical |
 | BE-4 | DONE | `GET /v1/grid/{pollutant}/range` packed delta+brotli blob, frameskip, KEYFRAME_INTERVAL=60 | BE-3 | Immutable cache headers |
 | BE-5 | DONE | Step→stride + clamp-table enforcement (422 below min-step) | BE-4 | Table locked in STRUCTURE |
 | BE-6 | DONE | `GET /v1/timerange` (bounds, steps, buckets) | BE-2 | 3-day demo span (Open Item 3 resolved) |
 | BE-7 | DONE | OpenAQ wrapper: `/v1/sensors`, `/v1/sensors/readings` (hold hourly across buckets, datetimeLast) | SETUP-1 | Mock when key empty; real fetch skeleton wired |
-| BE-8 | DONE | Mock vehicles: `/v1/vehicles`, `/v1/vehicles/{id}/path` w/ per-vertex readings | BE-2 | 8 vehicles (Open Item 1 resolved) |
+| BE-8 | DONE | Vehicle Probe Model: ~50 vehicles on OSRM road loops, field-sampled readings, sub-point path | BE-2 | `field.py`+`fleet.py`+`routes.py`+`probes.py`; `scripts/gen_routes.py`→`app/static_data/routes.json` |
 | BE-9 | DONE | `GET /v1/point` interpolated all-pollutant reading + nearestSensor | BE-2 | Primary spatial interaction |
 | BE-10 | DONE | `GET /v1/alerts` (WS demoted/optional) | BE-2 | threshold-based mock |
 | BE-11 | DONE | Bounds-PNG fallback dual-emit (built, frontend unwired) | BE-2 | Insurance; needs Pillow (optional dep) |
@@ -114,7 +114,7 @@ Tasks marked `[FE]`/`[BE]` run in that worktree; `[INFRA]`/`[DOC]` in root.
 | FE-6 | TODO | NavWindow: single-bucket nav + range playback, step selector w/ live clamp greying | FE-5, BE-5, BE-6 | |
 | FE-7 | DONE | PollutantTabs (dynamic from /pollutants) + Legend (per-pollutant scale) + scales.ts | FE-1, BE-1 | PollutantTabs.tsx, Legend.tsx, scales.ts (EAQI+conc ramps) |
 | FE-8 | TODO | SensorsLayer (circle, tier-styled, recolor per bucket) | FE-2, BE-7 | |
-| FE-9 | TODO | VehiclesLayer (lerp during playback) + TrailLayer (line-gradient, pickable vertices) | FE-2, BE-8 | source.setData outside React |
+| FE-9 | DONE | VehiclesLayer: rAF sub-bucket road animation along 40 sub-points + comet tail + colour-by-pollutant + selected-vehicle trail | FE-2, BE-8 | source.setData outside React; `valueToColor` in scales.ts; bearing-arrow symbol deferred |
 | FE-10 | TODO | Point-pick pin → PointPanel (all pollutants, confidence, AbortController latest-wins) | FE-2, BE-9 | |
 | FE-11 | DONE | TopBar (logo, AQI badge, vehicle count, UTC+3 clock, staleness) | FE-1 | DST-aware via Intl; stale + alert badge |
 | FE-12 | DONE | URL deep-link state {pollutant,t,mode,range} | FE-6, FE-7 | urlState.ts; uiStore pushes on every change |
@@ -172,7 +172,7 @@ Caveats:
 
 ## Open items (carried from STRUCTURE)
 
-1. ✅ Vehicle count — **8 vehicles** (2 trucks, 3 vans, 3 bikes). Locked in BE-8.
+1. ✅ Vehicle count — **~50 vehicles** (12 trucks, 22 vans, 10 cars, 6 buses). Vehicle Probe Model, BE-8.
 2. ✅ Base map style — CartoDB Dark Matter raster. LOCKED.
 3. ✅ Demo data span — **3 days** (live rolling window). Locked in BE-6/BE-12.
 4. ✅ Step→min-step clamp — LOCKED.
@@ -201,9 +201,9 @@ ADAM-backend/
     api/v1/__init__.py # APIRouter; sub-routers added per BE task
     core/
       binary.py        # header codec (SETUP-3) — mirrors binaryHeader.ts
-      grid_gen.py      # BE-2 (TODO)
-      buckets.py       # 10-min bucket helpers (TODO)
-    models/schemas.py  # pydantic mirrors of types.ts (TODO)
+      grid_gen.py      # BE-2 — IDW/RBF, 5 hotspots, traffic+drift
+      buckets.py       # 10-min bucket helpers
+    models/schemas.py  # pydantic mirrors of types.ts
     data/              # pre-generated demo buckets (gitignored, BE-12)
   tests/
     fixtures/          # golden .bin shared w/ FE __fixtures__
