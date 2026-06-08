@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: adam-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ADAM_GRID_DIM
+        value: 256
+      - key: ADAM_CORS_ORIGINS
+        value: '["https://adam-frontend-delta.vercel.app","https://aervigil.com","https://www.aervigil.com"]'
+      - key: ADAM_DEMO_FROM
+        value: ""
+      - key: ADAM_DEMO_TO
+        value: ""
