@@ -101,6 +101,13 @@ export function HeatmapLayer() {
 
   const [error, setError] = useState<string | null>(null)
   const [singleLoading, setSingleLoading] = useState(false)
+  // Show "warming up" note when a load drags on (cold backend)
+  const [showWarmup, setShowWarmup] = useState(false)
+  useEffect(() => {
+    if (!singleLoading) { setShowWarmup(false); return }
+    const id = setTimeout(() => setShowWarmup(true), 2000)
+    return () => clearTimeout(id)
+  }, [singleLoading])
 
   // Keep timeState ref current for use inside engine callbacks
   timeStateRef.current = timeState
@@ -425,12 +432,21 @@ export function HeatmapLayer() {
   if (singleLoading && timeState.mode === 'single' && timeState.t !== 'live') {
     return (
       <div style={{
-        position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
-        background: 'rgba(20,20,20,0.8)', color: '#888', padding: '6px 14px',
-        borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6,
+        position: 'absolute', top: 64, left: '50%', transform: 'translateX(-50%)',
+        background: 'rgba(20,20,20,0.85)', color: '#ccc', padding: '8px 16px',
+        borderRadius: 6, fontSize: 12, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', gap: 4, backdropFilter: 'blur(6px)', zIndex: 30,
+        maxWidth: 320, textAlign: 'center', pointerEvents: 'none',
       }}>
-        <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
-        Loading grid…
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+          Loading grid…
+        </div>
+        {showWarmup && (
+          <div style={{ fontSize: 11, color: '#888', lineHeight: 1.4 }}>
+            Current version is a demo — please wait for the backend server to warm up.
+          </div>
+        )}
       </div>
     )
   }
